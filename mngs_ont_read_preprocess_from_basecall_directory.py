@@ -15,6 +15,7 @@ import argparse
 from datetime import datetime
 import subprocess
 import gzip
+import tarfile
 
 
 def get_arguments_from_command_line():
@@ -222,7 +223,7 @@ output_barcode_information_tsv = os.path.join(output_dir_path, "barcode_informat
 output_barcode_raw_fastq_dir = os.path.join(output_dir_path, "per_barcode_raw_fastq")
 output_barcode_qcpass_fastq_dir = os.path.join(output_dir_path, "per_barcode_qcpass_fastq")
 output_barcode_hostrm_fastq_dir = os.path.join(output_dir_path, "per_barcode_hostrm_fastq")
-
+output_tarball = os.path.join(output_dir_path, "host_removed_fastq_and_sample_information.tar.gz")
 
 # basic sanity check about user-provided inputs
 if not os.path.isdir(basecall_dir):
@@ -333,12 +334,14 @@ list_barcodeno_raw_read_fastq = ['']*n_barcodeno
 list_barcodeno_qcpass_read_fastq = ['']*n_barcodeno
 list_barcodeno_hostrm_read_fastq = ['']*n_barcodeno
 list_barcodeno_host_align_paf = ['']*n_barcodeno
+list_barcodeno_sample_info_txt = ['']*n_barcodeno
 for barcodeno_index in range(n_barcodeno):
     barcodeno = list_barcodeno[barcodeno_index]
     list_barcodeno_raw_read_fastq[barcodeno_index] = os.path.join(output_barcode_raw_fastq_dir, barcodeno + ".raw.fastq")
     list_barcodeno_qcpass_read_fastq[barcodeno_index] = os.path.join(output_barcode_qcpass_fastq_dir, barcodeno + ".qcpass.fastq")
     list_barcodeno_hostrm_read_fastq[barcodeno_index] = os.path.join(output_barcode_hostrm_fastq_dir, barcodeno + ".hostrm.fastq")
     list_barcodeno_host_align_paf[barcodeno_index] = os.path.join(output_barcode_hostrm_fastq_dir, barcodeno + ".host_genome_align.paf")
+    list_barcodeno_sample_info_txt[barcodeno_index] = os.path.join(output_barcode_hostrm_fastq_dir, barcodeno + ".sample_info.txt")
 
 
 """
@@ -517,7 +520,7 @@ for barcodeno_index in range(n_barcodeno):
     fw.write("\t" + str(total_bp_hostrm))
     fw.write("\n")
     #
-    output_indiv_sample_info = os.path.join(output_barcode_hostrm_fastq_dir, barcodeno + ".sample_info.txt")
+    output_indiv_sample_info = list_barcodeno_sample_info_txt[barcodeno_index]
     fw_indiv = open(output_indiv_sample_info, 'w')
     fw_indiv.write(">" + barcodeno + "\n")
     fw_indiv.write(":\tsample_name\t" + samplename + "\n")
@@ -530,6 +533,24 @@ for barcodeno_index in range(n_barcodeno):
     fw_indiv.write(":\ttotal_bp_raw\t" + str(total_bp_raw) + "\n")
     fw_indiv.close()
 fw.close()
+
+
+# Package a tarball that contains host-removed reads fastq.gz files and sample information txt files.
+files_to_package = []
+files_to_package.append(output_barcode_information_tsv)
+for barcodeno_index in range(n_barcodeno):
+    files_to_package.append(list_barcodeno_hostrm_read_fastq[barcodeno_index] + ".gz")
+    files_to_package.append(list_barcodeno_sample_info_txt[barcodeno_index])
+
+# Create a tarball and add each specified file
+with tarfile.open(output_tarball, "w:gz") as tar:
+    for file_path in files_to_package:
+        # Use os.path.basename to get only the file name
+        arcname = os.path.basename(file_path)
+        tar.add(file_path, arcname=arcname)
+
+print(f"Tarball created at {output_tarball}")
+
 
 midproc_time = datetime.now()
 midproc_time_fstr = midproc_time.strftime("%Y-%m-%d %H:%M:%S")
