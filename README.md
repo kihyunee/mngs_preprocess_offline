@@ -1,7 +1,18 @@
 # mngs_preprocess_offline
 
 ## Installation in a linux system
+Ensure that you have *tar*, *make*, *bzip2*, *gcc*, etc. in your system.
+If not,
+```
+apt update
+apt install tar -y
+apt install make -y
+apt install bzip2 -y
+apt install zlib1g-dev -y
+apt install build-essential -y
+```
 
+Install the utility.
 ```
 git clone https://github.com/kihyunee/mngs_preprocess_offline.git
 cd mngs_preprocess_offline/
